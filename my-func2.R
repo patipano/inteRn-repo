@@ -12,8 +12,6 @@ convertVec2Tri <- function(.vec, .rows, .cols) {
   return(matrix(collection, .rows, .cols, byrow = TRUE))
 }
 
-### 
-
 ### Triangularise vector
 triangularise <- function(.vec) {
   rows <- cols <- length(.vec)
@@ -128,11 +126,22 @@ getMackLambda(data.tri)
 forecastMack <- function(.tri) {
   rows <- dim(.tri)[1]
   cols <- dim(.tri)[2]
-  diagData <- laply(1:rows, function(x) .tri[x, cols - x + 1]) %>% rev
-  lower <- llaply(2:rows,
-    function(x) {
-      )
-  return(diagData)
+  bootResid <- resampleResid(.tri, TRUE)
+  bootTri <- recoverData(.tri, bootResid)
+  bootLambda <- getMackLambda(bootTri)
+  sigma2 <- getMackSigma(.tri) ^ 2
+  
+  diag.tri <- llply(1:rows, function(x) c(rep(NA, cols - x), .tri[x, cols - x + 1])) %>%
+    unlist %>% convertVec2Tri(rows, cols)
+  
+  for (i in 2:rows) {
+    for (j in cols - i + 2) {
+      theta <- sigma2[j] / lambda[j]
+      alpha <- lambda[j]
+      diag.tri[i, j] <- 
+    }
+  }
+  return(diag.tri)
 }
 forecastMack(data.tri)
 data.tri
