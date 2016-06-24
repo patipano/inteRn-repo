@@ -1,6 +1,10 @@
 ### USER-DEFINED FUNCTIONS FOR MACK'S MODEL ###
 library(plyr)
+library(dplyr)
+library(reshape2)
 library(magrittr)
+library(ggplot2)
+library(scales)
 
 ### Convert vector to triangle
 convertVec2Tri <- function(.vec, .rows, .cols) {
@@ -69,7 +73,7 @@ getResidUnscaled <- function(.tri) {
 getResidUnscaled(data.tri)
 
 ### Calculate square-root of scale parameters for each period "sigma"
-getMackSigma <- function(.tri, .finalVariance = FALSE) {
+getMackSigma <- function(.tri, .finalVariance = TRUE) {
   resid <- getResidUnscaled(.tri)
   result <- colSums(resid ^ 2, na.rm = TRUE)
   result <- llply(1:dim(.tri)[2],
@@ -135,15 +139,16 @@ forecastMack <- function(.tri) {
     unlist %>% convertVec2Tri(rows, cols)
   
   for (i in 2:rows) {
-    for (j in cols - i + 2) {
-      theta <- sigma2[j] / lambda[j]
-      alpha <- lambda[j]
-      diag.tri[i, j] <- 
+    for (j in (cols - i + 2):cols) {
+      theta <- sigma2[j] / bootLambda[j]
+      alpha <- (bootLambda[j] ^ 2) *  diag.tri[i, j - 1] / (sigma2[j])
+      diag.tri[i, j] <- rgamma(1, shape = alpha, scale = theta)
     }
   }
   return(diag.tri)
 }
 forecastMack(data.tri)
+getMackSigma(data.tri)
 data.tri
 # ### Calculate reserves for each origin period
 # getReserve <- function(.tri, .lambda) {
@@ -164,13 +169,31 @@ data.tri
 ##########################################################################
 
 bootMack <- function(.tri, B = 5) {
-  llply(1:B,
+  rows <- dim(.tri)[1]
+  cols <- dim(.tri)[2]
+  
+  result1 <- laply(1:B,
     function(x) {
-      bootResid.tri <- resampleResid(.tri, .finalVariance = TRUE)
-      bootData.tri <- recoverData(.tri, resid.tri, .finalVariance = TRUE)
-      bootLambda <- getMackLambda(bootData.tri)
-      bootReserve <- getReserve(bootData.tri,
-      
-    } 
+      forecast.tri <- forecastMack(.tri)
+      diagData <- laply(1:rows, function(y) forecast.tri[y, cols - y + 1]) %>% as.matrix
+      lastData <- forecast.tri[, cols] %>% as.matrix
+      lastData - diagData
+    }
   )
+  
+  result2 <- apply(result1, MARGIN = 2, FUN = mean) 
+  return(list(reserve = result1, mean = result2))
 }
+
+##############################################################
+boo <- bootMack(data.tri, B = 2500)
+boo$mean
+head(boo$reserve, 20)
+boom <- melt(boo$reserve)[-1]
+names(boom) <- c("origin", "reserve")
+head(boom)
+gg <- ggplot(data = filter(boom, origin != 1), aes(x = reserve)) +
+  geom_histogram() + 
+  facet_wrap(~ origin, nrow = 4, scales = "free") +
+  scale_x_continuous(labels = comma) + theme_light()
+gg
