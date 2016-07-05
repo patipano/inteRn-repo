@@ -5,6 +5,7 @@ library(reshape2)
 library(magrittr)
 library(ggplot2)
 library(scales)
+library(ggthemes)
 
 ### Convert vector to triangle
 convertVec2Tri <- function(.vec, .rows, .cols) {
@@ -186,6 +187,8 @@ bootMack <- function(.tri, B = 5) {
 }
 
 ##############################################################
+data.tri
+
 boo <- bootMack(data.tri, B = 2500)
 boo$mean
 head(boo$reserve, 20)
@@ -193,7 +196,20 @@ boom <- melt(boo$reserve)[-1]
 names(boom) <- c("origin", "reserve")
 head(boom)
 gg <- ggplot(data = filter(boom, origin != 1), aes(x = reserve)) +
-  geom_histogram() + 
+  geom_histogram(aes(y = ..density.., group = origin), col = "black") + 
   facet_wrap(~ origin, nrow = 4, scales = "free") +
-  scale_x_continuous(labels = comma) + theme_light()
+  scale_x_continuous(labels = comma) + theme_few()
 gg
+
+boo2 <- BootChainLadder(data.tri, 5000, process.distr = "gamma")
+boo2m <- melt(boo2$IBNR.ByOrigin[,1,])[, -2]
+names(boo2m) <- c("origin", "reserve")
+head(boo2m)
+gg2 <- ggplot(data = filter(boo2m, reserve != 0), aes(x = reserve)) +
+  geom_histogram(aes(group = origin), col = "black") + 
+  facet_wrap(~ origin, nrow = 4, scales = "free") +
+  scale_x_continuous(labels = comma) + theme_few()
+gg2
+summary(boo2)
+boo$mean
+filter(boo2m, reserve < 0)
