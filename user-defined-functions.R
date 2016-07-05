@@ -3,6 +3,7 @@ library(ChainLadder)
 library(plyr)
 library(dplyr)
 library(reshape2)
+library(ggplot2)
 ### Convert vector to triangle
 convertVec2Tri <- function(.vec, .rows, .cols) {
   collection <- c()
@@ -29,22 +30,17 @@ llply(1:10, function(x) sc[(10 - x + 1):10]) %>% unlist
 ### Diagnose residuals
 diagnoseResid <- function(.tri, .resid) {
   df <- melt(.tri, na.rm = TRUE) %>% 
-    join(melt(.resid, na.rm = TRUE, value.name = "resid")) %>%
+    join(melt(as.triangle(.resid), na.rm = TRUE, value.name = "resid")) %>%
     melt(id.vars = c("value", "resid"), value.name = "year")
-  
+  # return(df)
   gg <- ggplot(data = df, aes(x = year, y = resid)) +
     geom_point(aes(colour = variable)) +
     facet_wrap(~ variable)
   print(gg)
 }
 diagnoseResid(data.tri, getUnscaledResid(data.tri))
-
-### Get diagonal
-getDiag <- function(.tri) {
-  laply(1:nrow(.tri), function(x) .tri[x, ncol(.tri) - x + 1]
-}
-
-
+getScaledResid(data.tri) %>% as.triangle %>% melt(na.rm = TRUE)
+getUnscaledResid(data.tri)
 ### User-defined link function to handle negative values
 quasipoisson <- function (link = "log")
   ## Amended by David Firth, 2003.01.16, at points labelled ###

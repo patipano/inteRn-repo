@@ -78,12 +78,21 @@ bootstrapODP <- function(.tri, B = 1) {
     ### Add process error (Gamma)
     complete.tri <- rgamma(n = nPred, shape = pseudo.pred/scale2, scale = scale2) %>%
       cbind(pseudoF.df, value = .) %>%
-      rbind(pseudo.df) %>%
+      rbind(filter(pseudo.df, origin != 1)) %>%
       acast(origin ~ dev) %>% as.matrix %>% incr2cum
-    diag <- 
-  })
+    ### Calculate reserves
+    laply(1:nrow(complete.tri), function(x) complete.tri[x, ncol(.tri)] - complete.tri[x, ncol(.tri) - x]) %>%
+      matrix %>%
+      set_colnames("ultimate") %>%
+      set_rownames(2:nrow(.tri))
+  }) %>% array(unlist(.), dim = c(nrow(.[[1]]), ncol(.[[1]]), B))
   return(result)
 }
-bootstrapODP(data.tri, B = 1)
+
+boot <- bootstrapODP(data.tri, B = 2)
+boot %>% unlist %>% array(dim = c(9, 1, 2))
+
+apply(boot, mean) # Mean
+matrix(sc) %>% set_rownames(1:10) %>% set_colnames("ultimate")
 melt(data.tri) %>% filter(is.na(value)) %>% select(1:2) %>% arrange(origin)
 getScaledResid(data.tri)
