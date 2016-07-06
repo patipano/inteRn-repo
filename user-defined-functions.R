@@ -23,8 +23,6 @@ triangularise <- function(.vec) {
 }
 triangularise(1:4) %>% as.vector
 
-sc <- getScale(data.tri)
-sc
 
 llply(1:10, function(x) sc[(10 - x + 1):10]) %>% unlist
 ### Diagnose residuals
@@ -41,6 +39,16 @@ diagnoseResid <- function(.tri, .resid) {
 diagnoseResid(data.tri, getUnscaledResid(data.tri))
 getScaledResid(data.tri) %>% as.triangle %>% melt(na.rm = TRUE)
 getUnscaledResid(data.tri)
+
+### Triangle representation for data frame
+triRepresentation <- function(.df, .val) {
+  result <- acast(.df, origin ~ dev, value.var = .val)
+  names(dimnames(result)) <- c("origin", "dev")
+  return(result)
+}
+
+
+############################################################################
 ### User-defined link function to handle negative values
 quasipoisson <- function (link = "log")
   ## Amended by David Firth, 2003.01.16, at points labelled ###
